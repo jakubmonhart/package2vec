@@ -1,0 +1,16 @@
+data:
+  data_path: '/Users/kuba/Dropbox/work/package2vec/data/working/filtered_requirements.csv'
+  min_count: 2
+
+model:
+  neg_samples: 5
+  embed_dim: 200
+
+training:
+  epochs: 7
+  learning_rate: 0.003
+  batch_size: 1000
+  optimizer: 'SparseAdam'
+
+output:
+  path: 'results/pytorch_min_count/'

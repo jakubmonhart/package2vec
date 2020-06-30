@@ -1,0 +1,11 @@
+data_path: /Users/kuba/Dropbox/work/package2vec/data/working/test.csv
+output_path: results/glove_test42/
+X_max: 100
+alpha: 0.75
+embed_dim: 200
+learning_rate: 0.05
+n_epochs: 10
+batch_size: 100
+sparse: False
+min_count: 2
+
