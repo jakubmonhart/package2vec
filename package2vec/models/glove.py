@@ -16,8 +16,16 @@ import yaml
 from pathlib import Path
 
 class Options(object):
-    """docstring for options"""
+    '''
+    Object containing all data, model and training parameters.
+    '''
     def __init__(self, file_path):
+        '''
+        Parses configurations from yaml file to attributes of this class.
+        
+        Args:
+            file_path: path to yaml file containing congiguration.
+        '''
         super(Options, self).__init__()
         y = self.parse_options(file_path)
 
@@ -34,13 +42,19 @@ class Options(object):
         self.sparse = y['sparse']
         self.min_count = y['min_count']
 
-        # GPU
+        # GPU if available
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print('INFO | Using device: {}'.format(self.device))
 
         self.y = y
 
     def parse_options(self, file_path):
+        '''
+        Parses yaml file to dictionary.
+
+        Args:
+            file_path: path to yaml file containing congiguration.
+        '''
         with open(file_path, 'r') as stream:
             try:
                 y = yaml.safe_load(stream)
@@ -49,9 +63,18 @@ class Options(object):
         return y
 
 class GloveDataset(Dataset):
+    '''
+        Object containing dataset, word to indices map and vocabulary. Creates
+        dataset from raw data during intialization.
+    '''
     def __init__(self, options):
+        '''
+        Args:
+            options: instance of Options object containing data, model and
+                training configurations.
+        '''
 
-        # Data is already preprocessed (using filter2_requirements.py)
+        # Load data
         df = pd.read_csv(options.data_path)
 
         # Use only dependencies which occur more then or equal to min_count
@@ -66,11 +89,13 @@ class GloveDataset(Dataset):
         co_mat = create_co_mat(df, self.word2id)
         
         # Create X, i_idx and j_idx vectors
+        # X, i_idx and j_idx are lists of same length. Elements of i_idx and 
+        # j_idx are indices of two different words, corresponding element of X
+        # is count of co-occurence of those two words.
         X = list()
         self.i_idx = list()
         self.j_idx = list()
 
-        # This should create the dataset I am looping through
         for w_id, cnt in tqdm(co_mat.items()):
             for c_id, v in cnt.items():
                 if w_id != c_id:
@@ -79,7 +104,7 @@ class GloveDataset(Dataset):
                     self.j_idx.append(c_id)
 
 
-        # Compute log(X) and weight(X) beforehand?
+        # Compute log(X) and weight(X)
         self.i_idx = torch.LongTensor(self.i_idx)
         self.j_idx = torch.LongTensor(self.j_idx)
         X = torch.FloatTensor(X)
@@ -88,6 +113,14 @@ class GloveDataset(Dataset):
 
 
     def get_batches(self, batch_size, device):
+        '''
+        Iteratively returns elements of X, i_idx and j_idx correspindg to
+        randomly samples indices.
+
+        Args:
+            batch_size: integer
+            device: 'gpu' or 'cpu' - data is moved to gpu if device='gpu'
+        '''
         idxs = torch.randperm(len(self.i_idx))
         for l in range(0, len(idxs), batch_size):
             batch_idxs = idxs[l:l+batch_size]
@@ -98,12 +131,19 @@ class GloveDataset(Dataset):
 
 
 class GloveModel(nn.Module):
+    '''
+    PyTorch implementation of GloVe model.
+    '''
+
     def __init__(self, options):
-        super(GloveModel, self).__init__()
         '''
-        Should I set the embeddings as sparse?
+        Args:
+            options: instance of Options object containing data, model and
+                training configurations.
         '''
 
+        super(GloveModel, self).__init__()
+        
         # Weights - left and right
         self.L_vecs = nn.Embedding(options.vocab_len, options.embed_dim, 
             sparse = options.sparse)
@@ -121,6 +161,19 @@ class GloveModel(nn.Module):
         pass
 
     def loss(self, logX, weightX, i_idx, j_idx):
+        '''
+        Computes loss of batch given by arguments.
+
+        Args:
+            logX: Torch float tensor - log of co-occurence counts. 
+            weightX: Torch float tensor - outputs of weight function specified
+                in the GloVe paper.
+            i_idx & j_idx: Torch long tensors - indices of word pairs in batch
+
+        Returns:
+            Loss of batch given by arguments. 
+        '''
+
         l_vecs = self.L_vecs(i_idx)
         r_vecs = self.R_vecs(j_idx)
         l_bias = self.L_bias(i_idx).squeeze()
@@ -131,6 +184,16 @@ class GloveModel(nn.Module):
         return torch.mean(loss)
 
     def save_embbedings(self, path, word2id):
+        '''
+        Saves learned vectors and corresponding labels. There are two matrices 
+        (left and right weights) of weights representing learned embeddings. 
+        According to GloVe paper, best results are accomplished by using their 
+        sum.
+
+        Args:
+            path: path to folder to save the vectors and labels in.
+            word2id: dictionary - word to index map.
+        '''
         df = pd.DataFrame(self.L_vecs.weight.cpu().detach().numpy())
         df.to_csv(path + 'vectors1.tsv', sep='\t', header=False, index=False)
 
@@ -146,6 +209,17 @@ class GloveModel(nn.Module):
         df.to_csv(path + 'labels.tsv', sep='\t', header=False, index=False)
 
 def create_word2id(df):
+    '''
+    Creates word2id and vocab.
+
+    Args:
+        df: Pandas dataframe containing raw dataset.
+
+    Returns:
+        word2id: Dictionary - word to index map
+        vocab: Set of all dependencies in dataset
+    '''
+
     # Vocab and word2id
     vocab = set()
     word2id = dict()
@@ -159,6 +233,17 @@ def create_word2id(df):
 
 
 def create_co_mat(df, word2id):
+    '''
+    Creates co-occurence matrix of dependencies in dataset.
+
+    Args:
+        df: Pandas dataframe containing raw dataset.
+        word2id: Dictionary - word to index map.
+
+    Returns:
+        co_mat: defaultdict(Counter) - co-occurence matrix
+    '''
+
     # Loop through packages and their dependencies - add to corresponding location in matrix
     packages = df['package'].unique()
     co_mat = defaultdict(Counter)
@@ -176,6 +261,9 @@ def create_co_mat(df, word2id):
 
 
 def print_batch(logX, weightX, i_idx, j_idx, word2id):
+    '''
+    Print batch for debugging purposes.
+    '''
     print('logX: {}'.format(logX))
     print('weightX: {}'.format(weightX))
     print('i_idx: {}'.format(i_idx))
@@ -205,9 +293,9 @@ def train(options_path, options=None):
     for epoch in range(options.n_epochs):
         t_start = time.time()
         losses = []
+        
         for batch in dataset.get_batches(options.batch_size, options.device):
             optimizer.zero_grad()
-
             batch_loss = model.loss(*batch)
             losses.append(batch_loss)
             batch_loss.backward()

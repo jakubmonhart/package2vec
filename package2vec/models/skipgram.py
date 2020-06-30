@@ -102,7 +102,7 @@ class PackagesDataset(Dataset):
 
 class Package2Vec(nn.Module):
     '''
-    Skip-gram (word2vec) model using negative subsampling.
+    PyTorch implementation of Skip-gram (word2vec) model with negative subsampling.
     '''
     
     def __init__(self, options):
@@ -207,6 +207,7 @@ class Options(object):
 
         self.output_path = output['path']
 
+        # GPU if available
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print('INFO | Using device: {}'.format(self.device))
         self.sparse = True
