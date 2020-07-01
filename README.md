@@ -9,7 +9,7 @@ Using pypi's API, we created dataset of all available dependencies of python pac
 
 List of all packages installable from pypi: https://pypi.org/simple/ .
 
-Information about individual packages can be  https://pypi.org/pypi/'package'/json.
+Information about individual packages:  https://pypi.org/pypi/'package'/json.
 
 `src/data/parse_requirements.py` parses all available (dependencies of some python packages are not stated within pypi information) dependencies. Sample of parsed dependencies:
 
@@ -27,16 +27,29 @@ abilian-core,Flask-Migrate (>=2.0)
 
 First entry in row is python package, second entry is it's dependency. Some dependency entries contain quotation marks, version specification or other unwanted characters, `src/data/filter_requirements.py` cleans the data. It also filters out all packages with only one dependency, as those are not usefull for used models. It's possible to set parameter `MIN_COUNT` to some positive integer to filter out all dependencies which occur less then `MIN_COUNT` in the dataset.
 
+A brief exploration of this dataset can be found in `01-data_exploration.ipynb`.
+
+
 ## Models
-Both Skip-gram and GloVe models use co-occurence of words to train embeddings. By using packages co-occuring as dependencies of same package, we trained these models on this dataset.
+Both Skip-gram and GloVe models use co-occurence of words in context window to learn embedding. We treat dependencies of each package as one sentence, single dependency being one word. For this reason, packages with only one dependency are not useful. 
 
 ### Skip-gram
-The Skip-gram model with negative sampling we used is implemented in `src/models/skipgram.py` using PyTorch library. Dependencies of one package are treated as one sentence. Configuration of model and data to be used for training are specified in `.yaml` file (sample: `src/model/skipgram_options.yaml`). The model uses `cuda` if available.
+The Skip-gram model with negative sampling we used is implemented in `src/models/skipgram.py` using PyTorch library. Using Skip-gram with sentences, context window size must be defined for loss function. Dependencies of one package do not have any particular order and therefore are all treated as one context window irrespective of the number of dependencies.
+
+Configuration of model and data to be used for training are specified in `.yaml` file (sample: `src/model/skipgram_options.yaml`). The model uses `cuda` if available.
+
+Model can be run using `python skipgram.py skipgram_options.yaml`.
+
+Results of this model are described in `02-skipgram_results.ipynb`.
 
 ### GloVe
-The GloVe model is implemented in `src/models/glove.py` using PyTorch as well. Authors of GloVe paper<sup>[2](#glove_paper)</sup> used 'decreasing weighting function' - word pairs that are farther apart contribute less to the total co-occurence count. In our case, such 'decreasing weighting function' does not make sense, as there are no closer or farther packages in dependencies of one package which we treat as analogy to sentence.
+The GloVe model is implemented in `src/models/glove.py` using PyTorch as well. Authors of GloVe paper<sup>[2](#glove_paper)</sup> used 'decreasing weighting function' - word pairs that are farther apart contribute less to the total co-occurence count. In our case, such 'decreasing weighting function' is not necessary, as there are no closer or farther packages in dependencies of one package which we treat as analogy to sentence. We don't define contex window size, instead, all dependencies of one package are treated as context window irrespective of the number of dependencies.
 
+Configuration of model and data to be used for training are specified in `.yaml` file (sample: `src/model/glove_options.yaml`). The model uses `cuda` if available.
 
+Model can be run using `python glove.py glove_options.yaml`.
+
+Results of this model are described in `03-glove_results.ipynb`.
 
 ---
 

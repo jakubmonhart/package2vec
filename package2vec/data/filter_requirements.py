@@ -1,8 +1,8 @@
 import pandas as pd
 
-MIN_COUNT = 2
+MIN_COUNT = 1
 
-requirements_path = 'requirements_raw.csv'
+requirements_path = 'requirements.csv'
 output_path = 'requirements_mc{}.csv'.format(MIN_COUNT)
 
 df = pd.read_csv(requirements_path)

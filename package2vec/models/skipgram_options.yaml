@@ -1,16 +1,16 @@
 data:
-  data_path: '/Users/kuba/Dropbox/work/package2vec/data/working/filtered_requirements.csv'
+  data_path: 'data/processed/requirements_mc2.csv'
   min_count: 2
 
 model:
   neg_samples: 5
-  embed_dim: 200
+  embed_dim: 100
 
 training:
-  epochs: 7
-  learning_rate: 0.003
+  epochs: 20
+  learning_rate: 0.005
   batch_size: 1000
   optimizer: 'SparseAdam'
 
 output:
-  path: 'results/pytorch_min_count/'
+  path: 'skipgram_results/'

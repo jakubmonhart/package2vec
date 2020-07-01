@@ -1,10 +1,10 @@
-data_path: /Users/kuba/Dropbox/work/package2vec/data/working/test.csv
-output_path: results/glove_test42/
+data_path: data/processed/requirements_mc2.csv
+output_path: glove_results/
 X_max: 100
 alpha: 0.75
-embed_dim: 200
-learning_rate: 0.05
-n_epochs: 10
+embed_dim: 100
+learning_rate: 0.5
+n_epochs: 200
 batch_size: 100
 sparse: False
 min_count: 2
